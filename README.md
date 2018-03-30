@@ -1,0 +1,2 @@
+# gedcompare
+Compare GEDCOM files
