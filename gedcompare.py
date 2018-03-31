@@ -2,12 +2,31 @@
 
 import gedcom
 import sys
+import argparse
 
 # Since we are dealing with a lot of UTF-8 characters it can cuase encoding
 # errors. I'm not sure if this is the right thing to do, but I found the the
 # solution here: https://stackoverflow.com/a/21190382
 reload(sys)
 sys.setdefaultencoding('utf8')
+
+allowed_comparisons = ['gender','name','birth','death','burial']
+
+parser = argparse.ArgumentParser(description='Compare GEDCOM files.')
+parser.add_argument("file1")
+parser.add_argument("file2")
+parser.add_argument('--compare', default='gender,name,birth,death,burial',
+                    help='comma-separated list of attributes to compare,'
+                    'available:\n' + ','.join(allowed_comparisons))
+
+args = parser.parse_args()
+
+# Validate arguments
+to_compare = args.compare.split(',')
+for x in to_compare:
+    if x not in allowed_comparisons:
+        print("Error: '%s' is not a valid option for --compare" % x)
+        sys.exit(1)
 
 # Genders
 ICON_GENDER = u'🚻 '
@@ -121,7 +140,7 @@ def prepare_file(file_path, tmp_path):
 print("Loading GEDCOM files...")
 
 # Read all of the people from the first file (main).
-prepare_file(sys.argv[1], '/tmp/a.ged')
+prepare_file(args.file1, '/tmp/a.ged')
 gedcomfile = gedcom.parse('/tmp/a.ged')
 people1 = {}
 
@@ -129,7 +148,7 @@ for person in gedcomfile.individuals:
    people1[person.id] = person
 
 # Read all of the people from the second file (to diff).
-prepare_file(sys.argv[2], '/tmp/b.ged')
+prepare_file(args.file2, '/tmp/b.ged')
 gedcomfile = gedcom.parse('/tmp/b.ged')
 people2 = {}
 
@@ -215,21 +234,43 @@ for id2, id1 in person_map:
     p1 = None
     if id1 in people1:
         p1 = people2[id2]
+
     p2 = None
     if id1 in people1:
         p2 = people1[id1]
 
-    lines = filter(lambda x: x is not None, [
-        compare_line(ICON_GENDER, p1, p2, gender),
-        compare_line(ICON_NAME, p1, p2, first_name),
-        compare_line(ICON_NAME, p1, p2, last_name),
-        compare_line(ICON_BIRTH, p1, p2, birth_date),
-        compare_line(ICON_BIRTH, p1, p2, birth_place),
-        compare_line(ICON_DEATH, p1, p2, death_date),
-        compare_line(ICON_DEATH, p1, p2, death_place),
-        compare_line(ICON_BURIAL, p1, p2, burial_date),
-        compare_line(ICON_BURIAL, p1, p2, burial_place),
-    ])
+    prelines = []
+
+    if 'gender' in to_compare:
+        prelines.extend([
+            compare_line(ICON_GENDER, p1, p2, gender),
+        ])
+
+    if 'name' in to_compare:
+        prelines.extend([
+            compare_line(ICON_NAME, p1, p2, first_name),
+            compare_line(ICON_NAME, p1, p2, last_name),
+        ])
+
+    if 'birth' in to_compare:
+        prelines.extend([
+            compare_line(ICON_BIRTH, p1, p2, birth_date),
+            compare_line(ICON_BIRTH, p1, p2, birth_place),
+        ])
+
+    if 'death' in to_compare:
+        prelines.extend([
+            compare_line(ICON_DEATH, p1, p2, death_date),
+            compare_line(ICON_DEATH, p1, p2, death_place),
+        ])
+
+    if 'burial' in to_compare:
+        prelines.extend([
+            compare_line(ICON_BURIAL, p1, p2, burial_date),
+            compare_line(ICON_BURIAL, p1, p2, burial_place),
+        ])
+
+    lines = filter(lambda x: x is not None, prelines)
 
     if len(lines) > 0:
         print '%s      %s' % (person_str(p1).ljust(65), person_str(p2))
