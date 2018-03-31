@@ -18,6 +18,9 @@ parser.add_argument("file2")
 parser.add_argument('--compare', default='gender,name,birth,death,burial',
                     help='comma-separated list of attributes to compare,'
                     'available:\n' + ','.join(allowed_comparisons))
+parser.add_argument('--direction', default='both',
+                    help='show differences from the "left", "right" or "both"\n'
+                    '(default is "both")')
 
 args = parser.parse_args()
 
@@ -27,6 +30,10 @@ for x in to_compare:
     if x not in allowed_comparisons:
         print("Error: '%s' is not a valid option for --compare" % x)
         sys.exit(1)
+
+if args.direction not in ['left', 'right', 'both']:
+    print("Error: '%s' is not a valid option for --direction" % args.direction)
+    sys.exit(1)
 
 # Genders
 ICON_GENDER = u'🚻 '
@@ -217,8 +224,15 @@ def compare_line(title, p1, p2, f):
     c = ICON_NOT_EQUAL
     if left is '' and right is not '':
         c = ICON_RIGHT_ONLY
+        if args.direction != "right" and args.direction != "both":
+            return None
     elif left is not '' and right is '':
         c = ICON_LEFT_ONLY
+        if args.direction != "left" and args.direction != "both":
+            return None
+    else:
+        if args.direction != "both":
+            return None
 
     if left is '':
         left = '(none)'
