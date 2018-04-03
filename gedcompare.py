@@ -10,17 +10,33 @@ import argparse
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-allowed_comparisons = ['gender','name','birth','death','burial']
+allowed_comparisons = {
+    'gender': 'gender/sex',
+    'name': 'first and last name',
+    'birth': 'birth date and place',
+    'death': 'death date and place',
+    'burial': 'burial date and place',
+}
 
-parser = argparse.ArgumentParser(description='Compare GEDCOM files.')
+
+def compare_description():
+    d = ""
+    for key in sorted(allowed_comparisons):
+        d += "  %s = %s\n" % (key.ljust(6), allowed_comparisons[key])
+
+    return d
+
+
+parser = argparse.ArgumentParser(description='Compare GEDCOM files.',
+                                 formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("file1")
 parser.add_argument("file2")
-parser.add_argument('--compare', default='gender,name,birth,death,burial',
-                    help='comma-separated list of attributes to compare,'
-                    'available:\n' + ','.join(allowed_comparisons))
+parser.add_argument('--compare', default=','.join(allowed_comparisons.keys()),
+                    help='comma-separated list of attributes to compare,\n'
+                         'defaults to all of:\n' + compare_description())
 parser.add_argument('--direction', default='both',
                     help='show differences from the "left", "right" or "both"\n'
-                    '(default is "both")')
+                         '(default is "both")')
 
 args = parser.parse_args()
 
@@ -58,6 +74,7 @@ ICON_NOT_EQUAL = u'↔️ '
 ICON_LEFT_ONLY = u'⬅️ '
 ICON_RIGHT_ONLY = u'➡️ '
 
+
 def person_str(p):
     if p is None:
         return "(none)"
@@ -79,59 +96,69 @@ def person_str(p):
 
     return name
 
+
 def first_name(p):
     if p is None:
         return ''
 
     return p.name[0]
 
+
 def last_name(p):
     if p is None:
         return ''
-        
+
     return p.name[1]
+
 
 def gender(p):
     if p is None or 'SEX' not in p:
         return ''
-        
+
     return p['SEX'].value
+
 
 def birth_date(p):
     if p is None or 'BIRT' not in p or 'DATE' not in p['BIRT']:
         return ''
-        
+
     return p['BIRT']['DATE'].value
+
 
 def birth_place(p):
     if p is None or 'BIRT' not in p or 'PLAC' not in p['BIRT']:
         return ''
-        
+
     return p['BIRT']['PLAC'].value
+
 
 def death_date(p):
     if p is None or 'DEAT' not in p or 'DATE' not in p['DEAT']:
         return ''
-        
+
     return p['DEAT']['DATE'].value
+
 
 def death_place(p):
     if p is None or 'DEAT' not in p or 'PLAC' not in p['DEAT']:
         return ''
-        
+
     return p['DEAT']['PLAC'].value
+
 
 def burial_date(p):
     if p is None or 'BURI' not in p or 'DATE' not in p['BURI']:
         return ''
-        
+
     return p['BURI']['DATE'].value
+
 
 def burial_place(p):
     if p is None or 'BURI' not in p or 'PLAC' not in p['BURI']:
         return ''
-        
+
     return p['BURI']['PLAC'].value
+
 
 # The python gedcom package does not support some GEDCOM elements. The easiest
 # thing to do right now is to strip them out into a temp file first.
@@ -144,6 +171,7 @@ def prepare_file(file_path, tmp_path):
     with open(tmp_path, "w") as text_file:
         text_file.write('\n'.join(content))
 
+
 print("Loading GEDCOM files...")
 
 # Read all of the people from the first file (main).
@@ -152,7 +180,7 @@ gedcomfile = gedcom.parse('/tmp/a.ged')
 people1 = {}
 
 for person in gedcomfile.individuals:
-   people1[person.id] = person
+    people1[person.id] = person
 
 # Read all of the people from the second file (to diff).
 prepare_file(args.file2, '/tmp/b.ged')
@@ -160,7 +188,8 @@ gedcomfile = gedcom.parse('/tmp/b.ged')
 people2 = {}
 
 for person in gedcomfile.individuals:
-   people2[person.id] = person
+    people2[person.id] = person
+
 
 def find_by_id(people1, id2, person2):
     for id1, person1 in people1.iteritems():
@@ -169,14 +198,16 @@ def find_by_id(people1, id2, person2):
 
     return None
 
+
 def find_by_name(people1, person2):
     matches = []
     for id1, person1 in people1.iteritems():
-        if first_name(person1) == first_name(person2) and \
-            last_name(person1) == last_name(person2):
+        if first_name(person1) == first_name(person2) \
+                and last_name(person1) == last_name(person2):
             matches.append(id1)
 
     return matches
+
 
 def find_people(person_map, people1, people2):
     for id2, person2 in people2.iteritems():
@@ -216,7 +247,8 @@ sys.stdout.flush()
 person_map = []
 find_people(person_map, people1, people2)
 find_people(person_map, people2, people1)
-print "\n"
+print("\n")
+
 
 def compare_line(title, p1, p2, f):
     left, right = f(p1), f(p2)
@@ -243,6 +275,7 @@ def compare_line(title, p1, p2, f):
         return '  %s %s %s    %s %s' % (title, left.ljust(60), c, title, right)
 
     return None
+
 
 for id2, id1 in person_map:
     p1 = None
@@ -287,6 +320,6 @@ for id2, id1 in person_map:
     lines = filter(lambda x: x is not None, prelines)
 
     if len(lines) > 0:
-        print '%s      %s' % (person_str(p1).ljust(65), person_str(p2))
-        print '\n'.join(lines)
-        print
+        print('%s      %s' % (person_str(p1).ljust(65), person_str(p2)))
+        print('\n'.join(lines))
+        print("")

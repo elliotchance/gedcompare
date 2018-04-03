@@ -11,6 +11,22 @@ Usage
 gedcompare.py file1.ged file2.ged
 ```
 
+You may also use the following options:
+
+```txt
+-h, --help            show this help message and exit
+--compare COMPARE     comma-separated list of attributes to compare,
+                      defaults to all of:
+                        birth  = birth date and place
+                        burial = burial date and place
+                        death  = death date and place
+                        gender = gender/sex
+                        name   = first and last name
+--direction DIRECTION
+                      show differences from the "left", "right" or "both"
+                      (default is "both")
+```
+
 Legend
 ------
 
